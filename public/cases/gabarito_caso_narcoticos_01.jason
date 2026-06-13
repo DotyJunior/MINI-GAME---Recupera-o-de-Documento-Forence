@@ -1,0 +1,121 @@
+{
+  "_schema": "document-puzzle-v1",
+  "pista_desbloqueada": {
+    "id": "pista_narcoticos_01",
+    "texto": "REUNIÃO · GALPÃO 17 · 22:30 · PORTÃO NORTE",
+    "descricao_evidencia": "Bilhete manuscrito encontrado parcialmente destruído na cena do crime. Contém instruções de reunião e localização suspeita.",
+    "dificuldade": "medio",
+    "pista_desbloqueada": {
+      "id": "pista_documental_01",
+      "texto": "REUNIÃO · GALPÃO 17 · 22:30 · PORTÃO NORTE"
+    },
+    "canvas": {
+      "width": 725,
+      "height": 836
+    },
+    "percentual_conclusao": 100,
+    "_expansao_futura": {
+      "dificuldade_por_fragmento": false,
+      "fragmentos_opcionais": false,
+      "ordem_obrigatoria": false
+    }
+  },
+  "fragmentos": {
+    "fragment_01": {
+      "x": -126,
+      "y": -81,
+      "cx": 99,
+      "cy": 144,
+      "rotation": 0,
+      "snap_tolerance": 35
+    },
+    "fragment_02": {
+      "x": 71,
+      "y": -118,
+      "cx": 296,
+      "cy": 107,
+      "rotation": 0,
+      "snap_tolerance": 35
+    },
+    "fragment_03": {
+      "x": 334,
+      "y": -164,
+      "cx": 559,
+      "cy": 61,
+      "rotation": 0,
+      "snap_tolerance": 35
+    },
+    "fragment_04": {
+      "x": -73,
+      "y": 171,
+      "cx": 152,
+      "cy": 396,
+      "rotation": 0,
+      "snap_tolerance": 35
+    },
+    "fragment_05": {
+      "x": 186,
+      "y": 36,
+      "cx": 411,
+      "cy": 261,
+      "rotation": 0,
+      "snap_tolerance": 35
+    },
+    "fragment_06": {
+      "x": 363,
+      "y": -32,
+      "cx": 588,
+      "cy": 193,
+      "rotation": 0,
+      "snap_tolerance": 35
+    },
+    "fragment_07": {
+      "x": -29,
+      "y": 394,
+      "cx": 196,
+      "cy": 619,
+      "rotation": 0,
+      "snap_tolerance": 35
+    },
+    "fragment_08": {
+      "x": 244,
+      "y": 269,
+      "cx": 469,
+      "cy": 494,
+      "rotation": 0,
+      "snap_tolerance": 35
+    },
+    "fragment_09": {
+      "x": 435,
+      "y": 236,
+      "cx": 660,
+      "cy": 461,
+      "rotation": 0,
+      "snap_tolerance": 35
+    },
+    "fragment_10": {
+      "x": 24,
+      "y": 510,
+      "cx": 249,
+      "cy": 735,
+      "rotation": 0,
+      "snap_tolerance": 35
+    },
+    "fragment_11": {
+      "x": 325,
+      "y": 485,
+      "cx": 550,
+      "cy": 710,
+      "rotation": 0,
+      "snap_tolerance": 35
+    },
+    "fragment_12": {
+      "x": 443,
+      "y": 436,
+      "cx": 668,
+      "cy": 661,
+      "rotation": 0,
+      "snap_tolerance": 35
+    }
+  }
+}

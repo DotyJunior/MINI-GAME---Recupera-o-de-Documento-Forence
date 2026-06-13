@@ -1,0 +1,6 @@
+{
+  "name": "Minigame Forense",
+  "description": "Mini Game investigativo de laboratório criminal para reconstrução e perícia de documentos fragmentados.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
