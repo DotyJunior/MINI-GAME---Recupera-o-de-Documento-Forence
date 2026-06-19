@@ -13,8 +13,31 @@ import {
   VolumeX, 
   AlertTriangle,
   ChevronRight,
-  Info
+  Info,
+  Check,
+  FileSearch
 } from 'lucide-react';
+
+// @ts-ignore
+import gameOverSound from '../assets/.aistudio/game_over.mp3';
+
+// @ts-ignore
+import processingSound from '../assets/.aistudio/Processing.mp3';
+
+// @ts-ignore
+import snapSound from '../assets/.aistudio/SNAP.mp3';
+
+// @ts-ignore
+import dragSound from '../assets/.aistudio/arrasto_mouse.mp3';
+
+// @ts-ignore
+import victorySound from '../assets/.aistudio/victory.mp3';
+
+// @ts-ignore
+import errorSound from '../assets/.aistudio/error.mp3';
+
+// @ts-ignore
+import pieceFallSound from '../assets/.aistudio/peça_cai.mp3';
 
 // =========================================================================
 // CSS & EMBEDDED FONTS INJECTION
@@ -74,6 +97,81 @@ const STYLE_INJECTION = `
   #drawer_grid_tray > div > div {
     background-color: #0a0b11 !important;
   }
+
+  /* Zoom range slider tech styling */
+  .tech-slider {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 12px;
+    background: #081116;
+    border-radius: 6px;
+    outline: none;
+    border: 1px solid rgba(0, 240, 255, 0.2);
+    margin: 8px 0;
+  }
+  
+  .tech-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #8e9496;
+    cursor: pointer;
+    border: 1px solid #c5cbcd;
+    transition: background 0.15s ease-in-out;
+    box-shadow: 0 0 10px rgba(0, 240, 255, 0.2);
+  }
+  
+  .tech-slider::-webkit-slider-thumb:hover {
+    background: #a9afb1;
+  }
+  
+  .tech-slider::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    border: 1px solid #c5cbcd;
+    border-radius: 50%;
+    background: #8e9496;
+    cursor: pointer;
+    transition: background 0.15s ease-in-out;
+    box-shadow: 0 0 10px rgba(0, 240, 255, 0.2);
+  }
+  
+  .tech-slider::-moz-range-thumb:hover {
+    background: #a9afb1;
+  }
+
+  @keyframes alert-panel-pulsate {
+    0%, 100% {
+      filter: brightness(1) drop-shadow(0 0 10px rgba(255, 0, 0, 0.45));
+      border-color: rgba(239, 68, 68, 0.82);
+    }
+    50% {
+      filter: brightness(1.3) drop-shadow(0 0 25px rgba(255, 0, 0, 0.85));
+      border-color: rgba(255, 0, 0, 1);
+    }
+  }
+
+  .alert-pulse-block {
+    animation: alert-panel-pulsate 1s infinite ease-in-out;
+  }
+
+  @keyframes critical-system-glow {
+    0%, 100% {
+      opacity: 0.95;
+      filter: brightness(0.98);
+    }
+    50% {
+      opacity: 1;
+      filter: brightness(1.08);
+    }
+  }
+
+  .critical-flicker {
+    animation: critical-system-glow 2.5s infinite ease-in-out;
+  }
 `;
 
 // ==========================================
@@ -82,6 +180,8 @@ const STYLE_INJECTION = `
 class ForensicSoundEffects {
   private ctx: AudioContext | null = null;
   public enabled: boolean = true;
+  private processingAudio: HTMLAudioElement | null = null;
+  private dragAudio: HTMLAudioElement | null = null;
 
   private initCtx() {
     if (!this.ctx) {
@@ -133,31 +233,14 @@ class ForensicSoundEffects {
   playSnap() {
     if (!this.enabled) return;
     try {
-      this.initCtx();
-      if (!this.ctx) return;
-      const osc1 = this.ctx.createOscillator();
-      const osc2 = this.ctx.createOscillator();
-      const gain = this.ctx.createGain();
-      
-      osc1.type = 'sine';
-      osc1.frequency.setValueAtTime(700, this.ctx.currentTime);
-      osc1.frequency.exponentialRampToValueAtTime(1400, this.ctx.currentTime + 0.18);
-      
-      osc2.type = 'triangle';
-      osc2.frequency.setValueAtTime(120, this.ctx.currentTime);
-      
-      gain.gain.setValueAtTime(0.12, this.ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.005, this.ctx.currentTime + 0.22);
-      
-      osc1.connect(gain);
-      osc2.connect(gain);
-      gain.connect(this.ctx.destination);
-      
-      osc1.start();
-      osc2.start();
-      osc1.stop(this.ctx.currentTime + 0.22);
-      osc2.stop(this.ctx.currentTime + 0.22);
-    } catch (e) {}
+      const audio = new Audio(snapSound);
+      audio.volume = 0.55;
+      audio.play().catch(e => {
+        console.warn("Could not play snap sound:", e);
+      });
+    } catch (e) {
+      console.error(e);
+    }
   }
 
   playHint() {
@@ -182,41 +265,101 @@ class ForensicSoundEffects {
   playWin() {
     if (!this.enabled) return;
     try {
-      this.initCtx();
-      if (!this.ctx) return;
-      const notes = [293.66, 349.23, 440.00, 587.33, 698.46, 880.00, 1174.66];
-      notes.forEach((freq, idx) => {
-        const osc = this.ctx!.createOscillator();
-        const gain = this.ctx!.createGain();
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(freq, this.ctx!.currentTime + idx * 0.09);
-        gain.gain.setValueAtTime(0.08, this.ctx!.currentTime + idx * 0.09);
-        gain.gain.exponentialRampToValueAtTime(0.005, this.ctx!.currentTime + idx * 0.09 + 0.45);
-        osc.connect(gain);
-        gain.connect(this.ctx!.destination);
-        osc.start(this.ctx!.currentTime + idx * 0.09);
-        osc.stop(this.ctx!.currentTime + idx * 0.09 + 0.45);
+      const audio = new Audio(victorySound);
+      audio.volume = 0.55;
+      audio.play().catch(e => {
+        console.warn("Could not play victory sound:", e);
       });
-    } catch (e) {}
+    } catch (e) {
+      console.error(e);
+    }
   }
 
   playError() {
     if (!this.enabled) return;
     try {
-      this.initCtx();
-      if (!this.ctx) return;
-      const osc = this.ctx.createOscillator();
-      const gain = this.ctx.createGain();
-      osc.type = 'sawtooth';
-      osc.frequency.setValueAtTime(140, this.ctx.currentTime);
-      osc.frequency.setValueAtTime(110, this.ctx.currentTime + 0.12);
-      gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.22);
-      osc.connect(gain);
-      gain.connect(this.ctx.destination);
-      osc.start();
-      osc.stop(this.ctx.currentTime + 0.22);
+      const audio = new Audio(errorSound);
+      audio.volume = 0.55;
+      audio.play().catch(e => {
+        console.warn("Could not play error sound:", e);
+      });
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  playGameOver() {
+    if (!this.enabled) return;
+    try {
+      const audio = new Audio(gameOverSound);
+      audio.volume = 0.55;
+      audio.play().catch(e => {
+        console.warn("Could not autoplay game over sound:", e);
+      });
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  playProcessing() {
+    if (!this.enabled) return;
+    try {
+      this.stopProcessing();
+      this.processingAudio = new Audio(processingSound);
+      this.processingAudio.volume = 0.55;
+      this.processingAudio.loop = true;
+      this.processingAudio.play().catch(e => {
+        console.warn("Could not load/play processing sound:", e);
+      });
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  stopProcessing() {
+    try {
+      if (this.processingAudio) {
+        this.processingAudio.pause();
+        this.processingAudio = null;
+      }
     } catch (e) {}
+  }
+
+  playDrag() {
+    if (!this.enabled) return;
+    try {
+      this.stopDrag();
+      this.dragAudio = new Audio(dragSound);
+      this.dragAudio.volume = 0.55;
+      this.dragAudio.loop = true;
+      this.dragAudio.play().catch(e => {
+        console.warn("Could not play drag sound:", e);
+      });
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  stopDrag() {
+    try {
+      if (this.dragAudio) {
+        this.dragAudio.pause();
+        this.dragAudio = null;
+      }
+    } catch (e) {}
+  }
+
+  playPieceFall() {
+    if (!this.enabled) return;
+    try {
+      const audio = new Audio(pieceFallSound);
+      audio.volume = 0.55;
+      audio.play().catch(e => {
+        console.warn("Could not play piece fall sound:", e);
+      });
+    } catch (e) {
+      console.error(e);
+    }
   }
 }
 
@@ -260,7 +403,7 @@ const CASO_0047_EVIDENCE: EvidenceCase = {
   code: "CASO #0047",
   evidence: "BILHETE REUNIAO",
   difficulty: "MÉDIO",
-  timeLimit: 300, // 5 minutes (05:00)
+  timeLimit: 150, // 2 minutes and 30 seconds (02:30)
   description: "Bilhete rasgado em 12 pedaços encontrado no escritório do suspeito principal. Detalha o local, horário e diretrizes da atividade suspecta.",
   unlockedClue: "REUNIÃO CONFIRMADA NO GALPÃO 17 EM 14/05 ÀS 22:30. ORDEM EXPRESSA: 'NÃO ENVOLVER A POLÍCIA'. HORÁRIO LIMITE COMPROMETEDOR: 23:00.",
   fragments: [
@@ -668,9 +811,75 @@ export default function App() {
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [hasWon, setHasWon] = useState<boolean>(false);
   const [hasLost, setHasLost] = useState<boolean>(false);
-  const [timeLeft, setTimeLeft] = useState<number>(300); // Default: Medium (5 min)
-  const [difficultySetting, setDifficultySetting] = useState<string>("MEDIO - 5 min");
+  const [isWaitingForWinTransition, setIsWaitingForWinTransition] = useState<boolean>(false);
+  const [timeLeft, setTimeLeft] = useState<number>(150); // Default: Medium (2.5 min)
+  const [difficultySetting, setDifficultySetting] = useState<string>("MEDIO - 2.5 min");
   const [mute, setMute] = useState<boolean>(false);
+  const [isDesktop, setIsDesktop] = useState<boolean>(false);
+  const [victoryZoom, setVictoryZoom] = useState<number>(1.0);
+  const [showLargeDocViewer, setShowLargeDocViewer] = useState<boolean>(false);
+
+  useEffect(() => {
+    const checkScreen = () => {
+      setIsDesktop(window.innerWidth >= 640);
+    };
+    checkScreen();
+    window.addEventListener("resize", checkScreen);
+    return () => window.removeEventListener("resize", checkScreen);
+  }, []);
+
+  const [processingState, setProcessingState] = useState<{
+    text: string;
+    percent: number;
+    show: boolean;
+  }>({ text: "", percent: 0, show: false });
+
+  useEffect(() => {
+    if (isWaitingForWinTransition) {
+      setProcessingState({ text: "✓ Fragmentos reconstruídos", percent: 0, show: true });
+      sounds.playProcessing();
+
+      const startTime = Date.now();
+      const interval = setInterval(() => {
+        const elapsed = Date.now() - startTime;
+        
+        let currentText = "✓ Fragmentos reconstruídos";
+        const currentPercent = Math.min(100, Math.floor((elapsed / 4500) * 100));
+
+        if (elapsed < 800) {
+          currentText = "✓ Fragmentos reconstruídos";
+        } else if (elapsed < 1600) {
+          currentText = "✓ Integridade documental: 100%";
+        } else if (elapsed < 2600) {
+          currentText = "✓ Analisando conteúdo documental...";
+        } else if (elapsed < 3600) {
+          currentText = "✓ Correlacionando evidências...";
+        } else {
+          currentText = "✓ Pista localizada";
+        }
+
+        setProcessingState({
+          text: currentText,
+          percent: currentPercent,
+          show: true
+        });
+
+        if (elapsed >= 4500) {
+          clearInterval(interval);
+          sounds.stopProcessing();
+          setProcessingState(prev => ({ ...prev, show: false }));
+        }
+      }, 30);
+
+      return () => {
+        clearInterval(interval);
+        sounds.stopProcessing();
+      };
+    } else {
+      setProcessingState({ text: "", percent: 0, show: false });
+      sounds.stopProcessing();
+    }
+  }, [isWaitingForWinTransition]);
 
   // Dynamic Case Extension States
   const [currentCase, setCurrentCase] = useState<EvidenceCase | null>(null);
@@ -717,10 +926,10 @@ export default function App() {
         setHasWon(false);
         setHasLost(false);
         
-        let initialSecs = 300;
+        let initialSecs = 150;
         let autoAligned = false;
         if (difficultySetting.includes("MEDIO")) {
-          initialSecs = 300;
+          initialSecs = 150;
         } else if (difficultySetting.includes("DIFICIL")) {
           initialSecs = 180;
         } else {
@@ -760,7 +969,7 @@ export default function App() {
           code: "CASO #01",
           evidence: "BILHETE REUNIAO",
           difficulty: (pd.dificuldade || "MÉDIO").toUpperCase(),
-          timeLimit: 300,
+          timeLimit: 150,
           description: pd.descricao_evidencia || "Caso Narcóticos 01",
           unlockedClue: pdd.texto || pd.texto || "REUNIÃO · GALPÃO 17 · 22:30 · PORTÃO NORTE",
           folder: cleaned,
@@ -850,7 +1059,7 @@ export default function App() {
       let initialSecs = 99999;
       let autoAligned = false;
       if (difficultySetting.includes("MEDIO")) {
-        initialSecs = 300;
+        initialSecs = 150;
       } else if (difficultySetting.includes("DIFICIL")) {
         initialSecs = 180;
       } else {
@@ -910,6 +1119,47 @@ export default function App() {
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
 
+  // Panning controls for the Large Document Viewer modal
+  const [isPanning, setIsPanning] = useState<boolean>(false);
+  const viewerScrollRef = useRef<HTMLDivElement | null>(null);
+  const panStartRef = useRef({ x: 0, y: 0, scrollLeft: 0, scrollTop: 0 });
+
+  const handleDocViewerPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.button !== 0 && e.pointerType === "mouse") return;
+    const container = viewerScrollRef.current;
+    if (!container) return;
+
+    setIsPanning(true);
+    panStartRef.current = {
+      x: e.clientX,
+      y: e.clientY,
+      scrollLeft: container.scrollLeft,
+      scrollTop: container.scrollTop
+    };
+    container.setPointerCapture(e.pointerId);
+  };
+
+  const handleDocViewerPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!isPanning) return;
+    const container = viewerScrollRef.current;
+    if (!container) return;
+
+    const dx = e.clientX - panStartRef.current.x;
+    const dy = e.clientY - panStartRef.current.y;
+
+    container.scrollLeft = panStartRef.current.scrollLeft - dx;
+    container.scrollTop = panStartRef.current.scrollTop - dy;
+  };
+
+  const handleDocViewerPointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!isPanning) return;
+    setIsPanning(false);
+    const container = viewerScrollRef.current;
+    if (container) {
+      container.releasePointerCapture(e.pointerId);
+    }
+  };
+
   const canvasRef = useRef<HTMLDivElement>(null);
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -929,18 +1179,26 @@ export default function App() {
   }, [mute]);
 
   // Start / Init core minigame state
-  const startReconstructionGame = (targetCase = currentCase) => {
-    if (!targetCase) return;
+  const startReconstructionGame = (targetCase: any = currentCase) => {
+    // If targetCase is a click event or has no fragments, fall back to currentCase
+    let actualCase = targetCase;
+    if (!actualCase || !actualCase.fragments || (typeof actualCase.preventDefault === "function")) {
+      actualCase = currentCase;
+    }
+    if (!actualCase) return;
     sounds.playClick();
     setIsPlaying(true);
     setHasWon(false);
     setHasLost(false);
+    setIsWaitingForWinTransition(false);
+    setVictoryZoom(1.0);
+    setShowLargeDocViewer(false);
 
     // Parse difficulty values
     let initialSecs = 99999;
     let autoAligned = false;
     if (difficultySetting.includes("MEDIO")) {
-      initialSecs = 300;
+      initialSecs = 150;
     } else if (difficultySetting.includes("DIFICIL")) {
       initialSecs = 180;
     } else {
@@ -950,7 +1208,7 @@ export default function App() {
     setTimeLeft(initialSecs);
 
     // Initialize the puzzle coordinates
-    const initialArr = targetCase.fragments.map(f => {
+    const initialArr = actualCase.fragments.map((f: any) => {
       const allowedRotations = autoAligned ? [0] : [0, 90, 180, 270];
       const randomRot = allowedRotations[Math.floor(Math.random() * allowedRotations.length)];
       return {
@@ -973,8 +1231,11 @@ export default function App() {
     setIsPlaying(false);
     setHasWon(false);
     setHasLost(false);
+    setIsWaitingForWinTransition(false);
+    setVictoryZoom(1.0);
+    setShowLargeDocViewer(false);
     
-    let initialSecs = 300;
+    let initialSecs = 150;
     if (newDifficulty.includes("DIFICIL")) {
       initialSecs = 180;
     } else if (newDifficulty.includes("FACIL")) {
@@ -988,14 +1249,14 @@ export default function App() {
 
   // Handle countdown sequences
   useEffect(() => {
-    if (isPlaying && !hasWon && !hasLost && !difficultySetting.includes("FACIL")) {
+    if (isPlaying && !hasWon && !hasLost && !isWaitingForWinTransition && !difficultySetting.includes("FACIL")) {
       timerIntervalRef.current = setInterval(() => {
         setTimeLeft(prev => {
           if (prev <= 1) {
             clearInterval(timerIntervalRef.current!);
             setHasLost(true);
             setIsPlaying(false);
-            sounds.playError();
+            sounds.playGameOver();
             return 0;
           }
           return prev - 1;
@@ -1005,7 +1266,7 @@ export default function App() {
     return () => {
       if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
     };
-  }, [isPlaying, hasWon, hasLost, difficultySetting]);
+  }, [isPlaying, hasWon, hasLost, difficultySetting, isWaitingForWinTransition]);
 
   // Trigger init on mount
   useEffect(() => {
@@ -1014,7 +1275,12 @@ export default function App() {
 
   // Register global move and up event listeners for flawless drag-and-drop mechanics
   useEffect(() => {
-    if (activeDragId === null) return;
+    if (activeDragId === null) {
+      sounds.stopDrag();
+      return;
+    }
+
+    sounds.playDrag();
 
     const onGlobalMove = (e: PointerEvent) => {
       handlePointerMove(e);
@@ -1030,6 +1296,7 @@ export default function App() {
     return () => {
       window.removeEventListener('pointermove', onGlobalMove);
       window.removeEventListener('pointerup', onGlobalUp);
+      sounds.stopDrag();
     };
   }, [activeDragId, dragOffset]);
 
@@ -1056,7 +1323,7 @@ export default function App() {
 
   // Drag and Drop Engine matching touch & mouse (PointerEvents)
   const handlePointerDown = (e: React.PointerEvent, id: string) => {
-    if (!isPlaying) return;
+    if (!isPlaying || isWaitingForWinTransition) return;
 
     const item = pieces.find(p => p.id === id);
     if (item?.isSnapped) return;
@@ -1224,9 +1491,17 @@ export default function App() {
             setPieces(latest => {
               const snapCount = latest.filter(p => p.isSnapped).length;
               if (snapCount === currentCase.fragments.length) {
-                setIsPlaying(false);
-                setHasWon(true);
-                sounds.playWin();
+                setIsWaitingForWinTransition(true);
+                setTimeout(() => {
+                  setIsWaitingForWinTransition(current => {
+                    if (current) {
+                      setIsPlaying(false);
+                      setHasWon(true);
+                      sounds.playWin();
+                    }
+                    return false;
+                  });
+                }, 4500);
               }
               return latest;
             });
@@ -1238,7 +1513,7 @@ export default function App() {
         }
       } else {
         // Just drop the piece wherever on the canvas
-        sounds.playClick();
+        sounds.playPieceFall();
       }
     } else {
       // Returned to the drawer
@@ -1252,13 +1527,13 @@ export default function App() {
         }
         return p;
       }));
-      sounds.playClick();
+      sounds.playPieceFall();
     }
   };
 
   // Hint execution helper: penalizes time, snaps a piece perfectly
   const triggerForensicHint = () => {
-    if (!isPlaying || hasWon || hasLost) return;
+    if (!isPlaying || hasWon || hasLost || isWaitingForWinTransition) return;
 
     const remaining = pieces.filter(p => !p.isSnapped);
     if (remaining.length === 0) return;
@@ -1293,9 +1568,17 @@ export default function App() {
     // Direct win eval
     const snapCount = updated.filter(p => p.isSnapped).length;
     if (snapCount === currentCase.fragments.length) {
-      setIsPlaying(false);
-      setHasWon(true);
-      sounds.playWin();
+      setIsWaitingForWinTransition(true);
+      setTimeout(() => {
+        setIsWaitingForWinTransition(current => {
+          if (current) {
+            setIsPlaying(false);
+            setHasWon(true);
+            sounds.playWin();
+          }
+          return false;
+        });
+      }, 4500);
     }
   };
 
@@ -1674,66 +1957,458 @@ export default function App() {
 
             {/* DEFEAT DIALOG OVERLAY */}
             {hasLost && (
-              <div className="absolute inset-0 bg-black/90 flex flex-col justify-center items-center p-6 text-center z-40" id="failure_overlay">
-                <div className="border border-red-500 bg-gradient-to-b from-[#1b0808] to-black max-w-sm p-8 rounded shadow-[0_0_25px_rgba(239,68,68,0.3)]">
-                  <AlertTriangle className="w-12 h-12 text-red-500 mx-auto mb-4 animate-bounce" />
-                  <h3 className="text-sm font-bold text-red-400 uppercase tracking-widest mb-2 font-hud">TEMPO LIMITADO ESGOTADO</h3>
-                  <div className="text-[11.5px] text-zinc-400 mb-6 leading-relaxed">
-                    Você excedeu o tempo máximo estipulado pela perícia técnica. O conteúdo do bilhete corre o risco de ser adulterado.
+              <div 
+                className="absolute inset-0 bg-black/85 backdrop-blur-[2px] flex flex-col justify-center items-center p-6 text-center z-40 select-none overflow-hidden" 
+                id="failure_overlay"
+              >
+                {/* Large Background Document under the Game Over Screen */}
+                <div 
+                  className="absolute inset-0 pointer-events-none z-0 flex items-center justify-center opacity-40 filter blur-[8px] scale-[1.3]"
+                >
+                  {currentCase && (
+                    <RenderDocumentWhole 
+                      folder={currentCase.folder} 
+                      width={currentCase.canvasWidth || 720} 
+                      height={currentCase.canvasHeight || 840} 
+                    />
+                  )}
+                </div>
+
+                {/* Darkening tint overlay to ensure extreme text readability */}
+                <div className="absolute inset-0 bg-black/40 z-0 pointer-events-none" />
+
+                {/* Left Hazard Stripe Brand */}
+                <div 
+                  className="absolute left-0 top-0 bottom-0 w-8 md:w-[60px] z-10 shadow-[15px_0_35px_rgba(230,0,0,0.35)] border-r border-red-900/30"
+                  style={{
+                    background: 'repeating-linear-gradient(45deg, #dc2626, #dc2626 15px, #000000 15px, #000000 30px)'
+                  }}
+                />
+
+                {/* Right Hazard Stripe Brand */}
+                <div 
+                  className="absolute right-0 top-0 bottom-0 w-8 md:w-[60px] z-10 shadow-[-15px_0_35px_rgba(230,0,0,0.35)] border-l border-red-900/30"
+                  style={{
+                    background: 'repeating-linear-gradient(45deg, #dc2626, #dc2626 15px, #000000 15px, #000000 30px)'
+                  }}
+                />
+
+                {/* Central High Tech Defeat Dashboard Panel */}
+                <div className="z-20 max-w-2xl px-12 md:px-24 flex flex-col items-center justify-center critical-flicker">
+                  {/* ÍCONE ALERTA */}
+                  <div className="mb-8 md:mb-10">
+                    <AlertTriangle 
+                      className="text-black fill-[#e60000] w-14 h-14 md:w-20 md:h-20 filter drop-shadow-[0_0_15px_rgba(230,0,0,0.65)]" 
+                      strokeWidth={1.5} 
+                    />
                   </div>
+
+                  {/* ANÁLISE INTERROMPIDA */}
+                  <h2 className="text-xl md:text-4xl font-extrabold tracking-[0.1em] text-[#ff3333] font-digital mb-10 md:mb-12 uppercase filter drop-shadow-[0_0_8px_rgba(255,0,0,0.35)]">
+                    ANÁLISE INTERROMPIDA
+                  </h2>
+
+                  {/* BLOCO 'TEMPO ESGOTADO' (Neon red borders + moderate glow with brightness pulsation) */}
+                  <div 
+                    className="alert-pulse-block border-2 border-red-600 bg-black/90 px-8 py-3 md:px-[60px] md:py-[18px] mb-8 md:mb-10 rounded-sm shadow-[0_0_30px_rgba(239,68,68,0.45)] text-center"
+                  >
+                    <span className="text-2xl md:text-5xl font-black font-digital text-[#ff2222] tracking-[0.1em] block">
+                      TEMPO ESGOTADO
+                    </span>
+                  </div>
+
+                  {/* EVIDÊNCIA NÃO RECONSTRUÍDA */}
+                  <h3 className="text-base md:text-2xl font-bold font-hud text-[#e5e7eb] tracking-[0.08em] mb-4 md:mb-6 uppercase">
+                    EVIDÊNCIA NÃO RECONSTRUÍDA
+                  </h3>
+
+                  {/* TEXTO DE STATUS (Tempo Restante) */}
+                  <div className="text-xs md:text-sm font-hud text-zinc-400 mb-10 md:mb-14 tracking-wider uppercase">
+                    Tempo restante: <span className="text-red-500 font-digital font-bold text-sm md:text-base">{formatTimerDigits(timeLeft)}</span>
+                  </div>
+
+                  {/* BOTÃO REINICIAR ANÁLISE */}
                   <button
                     onClick={startReconstructionGame}
-                    className="w-full bg-red-500/15 hover:bg-red-500/25 border border-red-500 text-red-400 py-3 rounded text-xs font-bold uppercase transition-all cursor-pointer"
+                    className="px-8 py-3 bg-[#e60000]/10 hover:bg-[#e60000]/25 text-[#ff4444] border-2 border-[#e60000] rounded-sm font-digital text-xs md:text-sm font-bold tracking-widest uppercase transition-all duration-300 shadow-[0_0_15px_rgba(230,0,0,0.15)] hover:shadow-[0_0_25px_rgba(230,0,0,0.4)] cursor-pointer"
                   >
-                    Reescalar Nova Análise
+                    REINICIAR ANÁLISE
                   </button>
                 </div>
               </div>
             )}
 
+            {/* DOCUMENTO RESTAURADO COM SUCESSO HEADER */}
+            {isWaitingForWinTransition && (
+              <div className="absolute top-6 left-1/2 -translate-x-1/2 text-center select-none z-30 transition-all duration-300">
+                <h2 className="text-[13px] md:text-sm font-bold tracking-[0.25em] text-white uppercase font-hud filter drop-shadow-[0_0_8px_rgba(255,255,255,0.4)]">
+                  DOCUMENTO RESTAURADO COM SUCESSO
+                </h2>
+              </div>
+            )}
+
+            {/* MINI MODAL HUD DE PROCESSAMENTO */}
+            {processingState.show && (
+              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 w-full max-w-[440px] z-40 px-4 transition-all duration-300">
+                <div className="relative">
+                  {/* Tag above */}
+                  <div className="absolute -top-[21px] left-3 bg-[#060f14] border-t border-l border-r border-[#00ff66]/30 px-3 py-0.5 rounded-t-sm">
+                    <span className="text-[8px] font-bold tracking-[0.2em] text-[#00ff66] uppercase font-hud">
+                      PROCESSANDO EVIDENCIA
+                    </span>
+                  </div>
+                  {/* Main Box */}
+                  <div className="bg-[#0b1419]/95 border border-[#00ff66]/30 rounded-tr-md rounded-b-md p-4 backdrop-blur-sm shadow-[0_0_25px_rgba(0,255,102,0.15)] flex flex-col gap-3 font-mono">
+                    <div className="flex justify-between items-baseline">
+                      <div className="text-sm font-bold tracking-wider text-[#00ff66] select-none font-hud">
+                        {processingState.text}
+                      </div>
+                      <div className="flex items-baseline gap-0.5">
+                        <span className="text-3xl font-black font-hud text-[#00ff66] tracking-tighter select-none font-digital">
+                          {processingState.percent}
+                        </span>
+                        <span className="text-[10px] font-bold text-[#00ff66]/60 font-hud select-none">
+                          %
+                        </span>
+                      </div>
+                    </div>
+                    
+                    {/* Segmented Led bar */}
+                    <div className="bg-black/60 border border-emerald-950/60 p-1 rounded-sm flex gap-1 h-7">
+                      {Array.from({ length: 24 }).map((_, idx) => {
+                        const isActive = idx < Math.floor((processingState.percent / 100) * 24);
+                        return (
+                          <div
+                            key={idx}
+                            className={`flex-1 rounded-[1px] transition-all duration-100 ${
+                              isActive
+                                ? "bg-[#00ff66] shadow-[0_0_6px_#00ff66]"
+                                : "bg-emerald-950/15 border border-emerald-950/30"
+                            }`}
+                          />
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* VICTORY OVERLAY WITH HIGH TECH DOSSIER REVELATION */}
-            {hasWon && (
-              <div className="absolute inset-0 bg-black/95 flex flex-col justify-center items-center p-6 text-center z-50 overflow-y-auto" id="victory_overlay">
-                <div className="border border-[#00ff66] bg-gradient-to-b from-[#021f0f] to-[#010804] max-w-xl p-8 rounded-sm shadow-[0_0_35px_rgba(0,255,102,0.4)] my-4">
-                  
-                  <CheckCircle2 className="w-12 h-12 text-[#00ff66] mx-auto mb-3 animate-pulse" />
-                  <h2 className="text-sm font-bold text-[#00ff66] uppercase tracking-wider font-hud">RECONSTITUIÇÃO DOCUMENTAL CONCLUÍDA</h2>
-                  <div className="text-[9px] text-[#00ff66]/50 uppercase tracking-widest mb-5">SISTEMA CIBERNÉTICO ANALÍTICO // ANÁLISE DE SUCESSO</div>
+            {hasWon && currentCase && (
+              <div 
+                className="absolute inset-0 flex flex-col justify-center items-center p-4 md:p-8 text-center z-50 overflow-y-auto select-none" 
+                id="victory_overlay"
+                style={{
+                  backgroundColor: '#000000',
+                  backgroundSize: '16px 16px',
+                  backgroundImage: `
+                    radial-gradient(circle at 50% 50%, rgba(0, 60, 24, 0.28) 0%, rgba(0, 0, 0, 0.99) 80%),
+                    linear-gradient(to right, rgba(0, 255, 102, 0.035) 1px, transparent 1px),
+                    linear-gradient(to bottom, rgba(0, 255, 102, 0.035) 1px, transparent 1px)
+                  `
+                }}
+              >
+                {/* Vignette effect layer on screen extremities */}
+                <div 
+                  className="absolute inset-0 pointer-events-none z-0"
+                  style={{
+                    boxShadow: 'inset 0 0 120px 30px rgba(0, 0, 0, 0.95)'
+                  }}
+                />
 
-                  {/* Restored note preview card */}
-                  <div className="w-[280px] h-[326px] mx-auto border border-[#00ff66]/40 shadow-[0_0_20px_rgba(0,255,102,0.15)] rounded overflow-hidden mb-6 relative">
-                    <div 
-                      className="absolute inset-0 origin-top-left"
-                      style={{ transform: `scale(${326 / (currentCase.canvasHeight || 840)})` }}
+                <div 
+                  className="border border-[#00ff66]/85 bg-[#000502]/95 max-w-[620px] w-full p-6 md:p-8 rounded-sm shadow-[0_0_50px_rgba(0,255,102,0.25)] my-4 flex flex-col items-center relative z-10"
+                  style={{
+                    boxShadow: '0 0 40px rgba(0, 255, 102, 0.15), inset 0 0 20px rgba(0, 255, 102, 0.08)'
+                  }}
+                >
+                  {/* Top indicator icons & check status */}
+                  <div className="flex justify-center items-center h-12 w-12 rounded-full border-2 border-[#00ff66] bg-black shadow-[0_0_15px_rgba(0,255,102,0.3)] mb-3 animate-pulse">
+                    <Check className="w-7 h-7 text-[#00ff66] stroke-[3]" />
+                  </div>
+
+                  {/* High Tech Header Text */}
+                  <h1 className="text-lg md:text-xl font-black text-[#00ff66] tracking-[0.16em] font-hud uppercase mb-0.5 drop-shadow-[0_0_6px_rgba(0,255,102,0.5)]">
+                    Análise Concluída
+                  </h1>
+                  <h2 className="text-[10px] md:text-[11px] font-bold text-[#00ff66] tracking-[0.12em] font-hud uppercase mb-1">
+                    Evidência Reconstruída com Sucesso
+                  </h2>
+                  <div className="text-[7.5px] md:text-[8px] text-[#00ff66]/65 font-mono tracking-[0.18em] font-bold uppercase mb-3">
+                    Sistema Forense CSI v2.7 • Processamento Finalizado
+                  </div>
+
+                  {/* Thin tech dividing rule */}
+                  <div className="w-full h-[1px] bg-[#00ff66]/25 mb-5" />
+
+                  {/* PROTAGONIST: Restored note preview card */}
+                  {(() => {
+                    const viewWidth = currentCase.canvasWidth || 720;
+                    const viewHeight = currentCase.canvasHeight || 840;
+                    const targetHeight = isDesktop ? 450 : 290;
+                    const docScaleFactor = targetHeight / viewHeight;
+                    const targetWidth = viewWidth * docScaleFactor;
+
+                    return (
+                      <div 
+                        className="relative mx-auto border border-[#00ff66]/40 bg-black/60 shadow-[0_0_25px_rgba(0,255,102,0.12)] rounded-sm p-1.5 mb-5 select-none cursor-pointer group"
+                        style={{
+                          width: `${targetWidth}px`,
+                          height: `${targetHeight}px`,
+                        }}
+                        onClick={() => setShowLargeDocViewer(true)}
+                        title="Clique para ampliar o documento"
+                      >
+                        {/* Corner tick brackets */}
+                        <div className="absolute top-0 left-0 w-3.5 h-3.5 border-t border-l border-[#00ff66] z-10" />
+                        <div className="absolute top-0 right-0 w-3.5 h-3.5 border-t border-r border-[#00ff66] z-10" />
+                        <div className="absolute bottom-0 left-0 w-3.5 h-3.5 border-b border-l border-[#00ff66] z-10" />
+                        <div className="absolute bottom-0 right-0 w-3.5 h-3.5 border-b border-r border-[#00ff66] z-10" />
+
+                        {/* Left ruler notch decorations */}
+                        <div className="absolute -left-3.5 top-2 bottom-2 w-1.5 flex flex-col justify-between items-end pointer-events-none opacity-45">
+                          {Array.from({ length: 15 }).map((_, i) => (
+                            <div key={i} className={`h-[1px] bg-[#00ff66] ${i % 3 === 0 ? 'w-2.5' : 'w-1.5'}`} />
+                          ))}
+                        </div>
+
+                        {/* Right ruler notch decorations */}
+                        <div className="absolute -right-3.5 top-2 bottom-2 w-1.5 flex flex-col justify-between items-start pointer-events-none opacity-45">
+                          {Array.from({ length: 15 }).map((_, i) => (
+                            <div key={i} className={`h-[1px] bg-[#00ff66] ${i % 3 === 0 ? 'w-2.5' : 'w-1.5'}`} />
+                          ))}
+                        </div>
+
+                        {/* Embedded scaling frame for the RenderDocumentWhole */}
+                        <div className="w-full h-full overflow-hidden relative rounded-sm bg-neutral-950">
+                          <div 
+                            className="absolute inset-0 origin-top-left"
+                            style={{ transform: `scale(${docScaleFactor})` }}
+                          >
+                            <RenderDocumentWhole 
+                              folder={currentCase.folder} 
+                              width={viewWidth} 
+                              height={viewHeight} 
+                            />
+                          </div>
+
+                          {/* Zoom/Eye lens hover display */}
+                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+                            <span className="bg-black/95 text-[#00ff66] border border-[#00ff66]/60 px-3 py-1.5 rounded text-[9px] font-bold uppercase tracking-wider font-hud flex items-center gap-1.5 shadow-[0_0_12px_rgba(0,255,102,0.35)]">
+                              <FileSearch className="w-4 h-4" /> Ampliar Documento
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* "PISTA REVELADA" Container Box (with custom scanner icon glyph) */}
+                  <div className="border border-[#00ff66]/35 bg-emerald-950/10 w-full p-3.5 rounded-sm flex items-center gap-3.5 text-left mb-4 relative overflow-hidden">
+                    <div className="absolute right-2 top-1 text-[6.5px] text-[#00ff66]/25 font-mono tracking-widest uppercase">CORE_VAL_SUCCESS</div>
+
+                    {/* Scan Icon SVG matched to layout */}
+                    <div className="shrink-0 flex items-center justify-center p-1.5 border border-[#00ff66]/35 bg-black/50 rounded">
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#00ff66" strokeWidth="2" className="text-[#00ff66]">
+                        <path d="M4 8V4h4M16 4h4v4M4 16v4h4M16 20h4v-4M5 12h14" />
+                      </svg>
+                    </div>
+
+                    {/* Right side box details */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex justify-between items-center gap-2 mb-0.5">
+                        <span className="text-[10px] md:text-[11px] font-black font-hud text-[#00ff66] tracking-[0.1em] uppercase">
+                          Pista Revelada
+                        </span>
+                        
+                        {/* Security Label Badge */}
+                        <span className="inline-flex items-center gap-1 px-1.5 py-0.2 md:py-0.5 rounded-full border border-[#00ff66]/30 bg-black text-[7.5px] md:text-[8px] font-semibold text-[#00ff66]/75 font-hud">
+                          <span>Nível de segurança</span>
+                          <span className="text-[#00ff66] font-extrabold pb-0.5">100%</span>
+                        </span>
+                      </div>
+                      
+                      {/* Unlocked clue text displayed in UPPERCASE */}
+                      <div className="text-[10.5px] md:text-[11.5px] font-mono font-bold text-zinc-100 tracking-wide truncate">
+                        "{currentCase.unlockedClue?.toUpperCase() || ''}"
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Stats columns: INTEGRIDADE DO DOCUMENTO and STATUS DA EVIDÊNCIA */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 w-full mb-5">
+                    {/* Integridade Box */}
+                    <div className="border border-[#00ff66]/25 bg-black/60 p-2.5 rounded-sm flex flex-col justify-center h-[56px] text-left">
+                      <div className="flex justify-between items-center text-[8.5px] md:text-[9.5px] font-black text-[#00ff66]/80 tracking-wider font-hud uppercase mb-1.5">
+                        <span>Integridade do Documento</span>
+                        <span className="text-[#00ff66] font-bold font-mono">100%</span>
+                      </div>
+                      {/* Custom green solid bar indicator */}
+                      <div className="w-full h-2 bg-neutral-900 border border-[#00ff66]/20 rounded-sm overflow-hidden p-[1px]">
+                        <div className="h-full bg-[#00ff66] rounded-xs shadow-[0_0_6px_#00ff66]" style={{ width: '100%' }} />
+                      </div>
+                    </div>
+
+                    {/* Status Box */}
+                    <div className="border border-[#00ff66]/25 bg-black/60 px-3 py-2 rounded-sm flex items-center justify-between h-[56px] text-left">
+                      <div>
+                        <div className="text-[8.5px] md:text-[9.5px] font-black text-[#00ff66]/80 tracking-wider font-hud uppercase">
+                          Status da Evidência
+                        </div>
+                        <div className="text-xs md:text-sm font-extrabold text-[#00ff66] tracking-widest font-hud">
+                          VALIDADA
+                        </div>
+                      </div>
+                      {/* Check icon badge */}
+                      <div className="flex items-center justify-center w-6.5 h-6.5 rounded-full border border-[#00ff66]/35 bg-emerald-950/20 text-[#00ff66] shadow-[0_0_6px_rgba(0,255,102,0.15)]">
+                        <Check className="w-3.5 h-3.5 stroke-[2.5]" />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Buttons Menu */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 w-full">
+                    <button
+                      onClick={() => setShowLargeDocViewer(true)}
+                      className="w-full bg-[#00ff66]/5 hover:bg-[#00ff66]/20 text-[#00ff66] border border-[#00ff66] rounded-sm py-2.5 px-3 font-black tracking-widest text-[11px] uppercase transition-all duration-300 flex items-center justify-center gap-2 cursor-pointer shadow-[0_0_12px_rgba(0,255,102,0.05)] hover:shadow-[0_0_20px_rgba(0,255,102,0.25)]"
                     >
-                      <RenderDocumentWhole 
-                        folder={currentCase.folder} 
-                        width={currentCase.canvasWidth || 720} 
-                        height={currentCase.canvasHeight || 840} 
-                      />
-                    </div>
+                      <FileSearch className="w-4 h-4 text-[#00ff66]" />
+                      Analisar Documento
+                    </button>
+
+                    <button
+                      onClick={() => startReconstructionGame()}
+                      className="w-full bg-[#00ff66]/12 hover:bg-[#00ff66]/25 text-[#00ff66] border border-[#00ff66] rounded-sm py-2 px-3 transition-all duration-300 flex items-center justify-center gap-2.5 cursor-pointer shadow-[0_0_12px_rgba(0,255,102,0.08)] hover:shadow-[0_0_20px_rgba(0,255,102,0.3)] text-left"
+                    >
+                      <RefreshCw className="w-4 h-4 text-[#00ff66] shrink-0" />
+                      <div>
+                        <div className="text-[11px] font-black tracking-widest leading-none">
+                          Escanear Novamente
+                        </div>
+                        <div className="text-[7px] font-bold text-[#00ff66]/75 tracking-wider leading-none mt-0.5">
+                          Reiniciar processo de análise
+                        </div>
+                      </div>
+                    </button>
                   </div>
 
-                  {/* Decrypted crime file intelligence report */}
-                  <div className="bg-[#02130a] border border-[#00ff66]/30 p-4 rounded text-left mb-6 relative">
-                    <div className="absolute top-2.5 right-3 flex items-center gap-1.5 text-[8px] text-[#00ff66] uppercase tracking-wider font-bold font-hud">
-                      <Unlock className="w-2.5 h-2.5" />
-                      CRIPTOGRAFIA REVELADA
-                    </div>
-                    <div className="text-[11px] font-bold text-[#00ff66] tracking-wider mb-2 font-hud uppercase">PISTA COLETADA DO {currentCase.code}</div>
-                    <p className="text-[11.5px] text-zinc-300 leading-relaxed font-sans mt-1 italic">
-                      "{currentCase.unlockedClue}"
-                    </p>
-                  </div>
+                </div>
+              </div>
+            )}
 
-                  {/* Operational control reinit btn */}
+            {/* FULL SCREEN DEDICATED DOCUMENT VIEWER OVERLAY */}
+            {showLargeDocViewer && (
+              <div 
+                className="absolute inset-0 bg-[#000508]/98 select-none z-50 flex flex-col items-center justify-start p-6 overflow-y-auto" 
+                id="doc_viewer_modal"
+              >
+                {/* Cyber grid header */}
+                <div className="w-full max-w-4xl border-b border-[#00f0ff]/30 pb-4 mb-6 flex flex-wrap justify-between items-center gap-4">
+                  <div>
+                    <h2 className="text-sm font-bold text-[#00f0ff] tracking-[0.2em] font-hud uppercase">
+                      VISUALIZADOR AMPLIADO DE EVIDÊNCIA
+                    </h2>
+                    <div className="text-[9px] text-[#00f0ff]/50 uppercase tracking-widest leading-none mt-1">
+                      {currentCase.code} // {currentCase.name} // INTEGRIDADE INTEGRAL RECONSTITUÍDA
+                    </div>
+                  </div>
+                  
+                  {/* Close view button */}
                   <button
-                    onClick={startReconstructionGame}
-                    className="w-full bg-[#00ff66]/15 hover:bg-[#00ff66]/30 text-[#00ff66] border border-[#00ff66] py-3 px-6 rounded-sm text-xs font-black uppercase tracking-wider transition-all cursor-pointer glow-green"
+                    onClick={() => setShowLargeDocViewer(false)}
+                    className="bg-red-500/10 hover:bg-red-500/25 border border-red-500 text-red-400 py-1.5 px-4 rounded-sm text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer"
                   >
-                    Escanear Novamente
+                    Voltar para o Relatório
                   </button>
+                </div>
 
+                {/* Massive scrollable document canvas box */}
+                <div 
+                  className="flex-1 w-full max-w-4xl border border-[#00f0ff]/20 bg-[#000d16] rounded-sm p-4 flex items-center justify-center relative overflow-hidden group shadow-[inset_0_0_40px_rgba(0,240,255,0.06)] min-h-[400px] lg:min-h-[500px]"
+                >
+                  {/* Tech crosshair grid background pattern decorator */}
+                  <div className="absolute inset-0 bg-[linear-gradient(rgba(0,240,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(0,240,255,0.02)_1px,transparent_1px)] bg-[size:24px_24px] pointer-events-none" />
+
+                  {/* Scrolling frame containing zoomed canvas */}
+                  {(() => {
+                    const viewWidth = currentCase.canvasWidth || 720;
+                    const viewHeight = currentCase.canvasHeight || 840;
+                    
+                    // Base scale for the visualizer view at 1.0 zoom (adjust so it fits cleanly)
+                    const viewerBaseScale = isDesktop ? 0.72 : 0.42;
+                    const scaleFactor = viewerBaseScale * victoryZoom;
+                    const scrollContainerWidth = viewWidth * scaleFactor;
+                    const scrollContainerHeight = viewHeight * scaleFactor;
+
+                    return (
+                      <div 
+                        ref={viewerScrollRef}
+                        onPointerDown={handleDocViewerPointerDown}
+                        onPointerMove={handleDocViewerPointerMove}
+                        onPointerUp={handleDocViewerPointerUp}
+                        onPointerLeave={handleDocViewerPointerUp}
+                        className={`w-full h-full overflow-auto flex p-4 scrollbar-cyber select-none ${
+                          isPanning ? 'cursor-grabbing' : 'cursor-grab'
+                        }`}
+                        style={{ position: 'absolute', inset: 0 }}
+                      >
+                        {/* Wrapper of exact calculated dimensions to enable scrolling */}
+                        <div 
+                          className="transition-all duration-200 ease-out m-auto shrink-0 border border-[#00f0ff]/40 shadow-[0_0_30px_rgba(0,240,255,0.15)] rounded bg-[#111]"
+                          style={{
+                            width: `${scrollContainerWidth}px`,
+                            height: `${scrollContainerHeight}px`,
+                            position: 'relative',
+                            overflow: 'hidden'
+                          }}
+                        >
+                          <div 
+                            className="absolute inset-0 origin-top-left"
+                            style={{ transform: `scale(${scaleFactor})` }}
+                          >
+                            <RenderDocumentWhole 
+                              folder={currentCase.folder} 
+                              width={viewWidth} 
+                              height={viewHeight} 
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
+
+                {/* BOTTOM FLOATING TECH BAR CONTROLLER FOR SLIDER ZOOM */}
+                <div className="w-full max-w-md bg-[#000c14] border border-[#00f0ff]/20 rounded px-6 py-4 mt-6 shadow-[0_0_20px_rgba(0,240,255,0.1)] flex flex-col gap-2 relative">
+                  <div className="flex justify-between items-baseline text-[10px] text-[#00f0ff] font-hud tracking-wider uppercase">
+                    <span className="font-hud opacity-80">Zoom do Sensor Óptico</span>
+                    <span className="font-hud text-xs font-bold font-mono text-[#00ff66]">
+                      {Math.round(victoryZoom * 100)}%
+                    </span>
+                  </div>
+                  
+                  <div className="flex items-center gap-4">
+                    <span className="text-[10px] text-[#00f0ff]/60 font-hud">MIN (100%)</span>
+                    <input 
+                      type="range"
+                      min="1"
+                      max="3.5"
+                      step="0.05"
+                      value={victoryZoom}
+                      onChange={(e) => setVictoryZoom(parseFloat(e.target.value))}
+                      className="tech-slider flex-1"
+                      style={{
+                        WebkitAppearance: 'none',
+                        width: '100%',
+                        height: '4px',
+                        background: '#011929',
+                        outline: 'none',
+                        border: '1px solid rgba(0,240,255,0.2)'
+                      }}
+                    />
+                    <span className="text-[10px] text-[#00ff66] font-hud font-bold">MAX (350%)</span>
+                  </div>
                 </div>
               </div>
             )}
@@ -1915,7 +2590,7 @@ export default function App() {
                   className="w-full bg-[#000c16] text-[#ffb700] border border-amber-500/40 rounded px-3 py-2 text-[11px] font-bold tracking-wider uppercase focus:outline-none focus:border-amber-500 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed appearance-none"
                 >
                   <option value="FACIL - Sem tempo">FÁCIL - SEM TEMPO</option>
-                  <option value="MEDIO - 5 min">MÉDIO - 05:00</option>
+                  <option value="MEDIO - 2.5 min">MÉDIO - 02:30</option>
                   <option value="DIFICIL - 3 min">DIFÍCIL - 03:00</option>
                 </select>
                 <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-amber-500">
@@ -1935,7 +2610,7 @@ export default function App() {
                 INICIAR
               </button>
               <button
-                onClick={() => resetReconstructionGame()}
+                onClick={() => startReconstructionGame()}
                 className="bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500 text-amber-500 text-[10px] py-3.5 rounded font-bold uppercase tracking-widest transition-all flex justify-center items-center gap-1 cursor-pointer"
               >
                 <RefreshCw className="w-3.5 h-3.5" />
@@ -1943,7 +2618,7 @@ export default function App() {
               </button>
               <button
                 onClick={triggerForensicHint}
-                disabled={!isPlaying || hasWon || hasLost}
+                disabled={!isPlaying || hasWon || hasLost || isWaitingForWinTransition}
                 className="bg-red-500/10 hover:bg-red-500/20 border border-red-500 text-red-500 text-[10px] py-3.5 rounded font-bold uppercase tracking-widest transition-all disabled:opacity-30 disabled:cursor-not-allowed flex justify-center items-center gap-0.5 cursor-pointer"
                 title="Consome -30S para posicionar peça aleatória"
               >
